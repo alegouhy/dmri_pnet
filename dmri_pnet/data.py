@@ -84,9 +84,10 @@ def split(s, n_val, seed=0):
 
 class CloudDataset(Dataset):
     # randomness is drawn from (seed, epoch, sample): reproducible, and workers never share a stream
-    def __init__(self, s, idx=None, key='signals', snr=None, p_drop=0., fdrop=(0, 0.5),
-                 max_pts=None, bmax=BMAX, seed=0):
-        self.s, self.key, self.snr, self.p_drop, self.fdrop = s, key, snr, p_drop, fdrop
+    # sigma: range of the noise level 1/SNR, drawn per sample
+    def __init__(self, s, idx=None, key='signals', sigma=None, p_drop=0., fdrop=(0, 0.5),
+                 max_pts=None, bmax=BMAX, seed=0, n_b0=None):
+        self.s, self.key, self.sigma, self.p_drop, self.fdrop, self.n_b0 = s, key, sigma, p_drop, fdrop, n_b0
         self.max_pts, self.bmax, self.seed, self.epoch = max_pts, bmax, seed, 0
         n = len(s['pid'])
         self.idx = np.arange(n) if idx is None else idx
@@ -100,8 +101,8 @@ class CloudDataset(Dataset):
         rng = np.random.default_rng((self.seed, self.epoch, i))
         bvals, bvecs = protocol(self.s, i)
         x = signal(self.s, i, self.key)
-        if self.snr:
-            x = sampling.rician(x, rng.uniform(*self.snr), rng)
+        if self.sigma:
+            x = sampling.noisy(x, rng.uniform(*self.sigma), rng, self.n_b0)
         keep = sampling.keep_points(len(x), rng, self.p_drop, self.fdrop, self.max_pts)
         return (torch.from_numpy(make_cloud(bvals[keep], bvecs[keep], x[keep], self.bmax)),
                 torch.from_numpy(self.targets[i]))
@@ -116,9 +117,9 @@ def pad_collate(batch):
 
 class SignalDataset(Dataset):
     # fixed protocol: a sample is the bare signal vector (MLP input)
-    def __init__(self, s, idx=None, key='signals', snr=None, seed=0):
+    def __init__(self, s, idx=None, key='signals', sigma=None, seed=0, n_b0=None):
         self.signals = fixed(s, key)[2]
-        self.snr, self.seed, self.epoch = snr, seed, 0
+        self.sigma, self.seed, self.epoch, self.n_b0 = sigma, seed, 0, n_b0
         self.idx = np.arange(len(self.signals)) if idx is None else idx
         self.targets = s.get('params', np.zeros((len(self.signals), 3))).astype(np.float32)
 
@@ -128,9 +129,9 @@ class SignalDataset(Dataset):
     def __getitem__(self, k):
         i = self.idx[k]
         x = self.signals[i]
-        if self.snr:
+        if self.sigma:
             rng = np.random.default_rng((self.seed, self.epoch, i))
-            x = sampling.rician(x, rng.uniform(*self.snr), rng)
+            x = sampling.noisy(x, rng.uniform(*self.sigma), rng, self.n_b0)
         return torch.from_numpy(x.astype(np.float32)), torch.from_numpy(self.targets[i])
 
 

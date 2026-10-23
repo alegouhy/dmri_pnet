@@ -28,10 +28,19 @@ def random_protocol(rng, nshell=(2, 5), b=(250, 5000), ndir=(12, 128)):
     return bvals, unit_vectors(len(bvals), rng)
 
 
-def rician(signal, snr, rng):
-    # sigma = 1/snr relative to S0 = 1
-    n1, n2 = rng.standard_normal((2,) + np.shape(signal)) / snr
+def rician(signal, sigma, rng):
+    # sigma relative to S0 = 1, i.e. 1/SNR; 0 is noise-free
+    n1, n2 = rng.standard_normal((2,) + np.shape(signal)) * sigma
     return np.sqrt((signal + n1) ** 2 + n2 ** 2)
+
+
+def noisy(signal, sigma, rng, n_b0=None):
+    # Rician noise; with n_b0 = (min, max), S/S0 as in real data: divided by the mean of a random number of
+    # noisy b=0s rather than by the true S0 = 1. Without it, the draws are those of rician alone.
+    x = rician(signal, sigma, rng)
+    if n_b0 is not None:
+        x = x / rician(np.ones(rng.integers(n_b0[0], n_b0[1] + 1)), sigma, rng).mean()
+    return x
 
 
 def keep_points(n, rng, p_drop=0., fdrop=(0, 0.5), max_pts=None):

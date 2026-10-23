@@ -35,3 +35,14 @@ def test_fixed_protocols():
     bvals, bvecs = protocols.hardi()
     cos = np.abs(bvecs @ bvecs.T) - 2 * np.eye(len(bvecs))
     assert np.degrees(np.arccos(cos.max())) > 15      # directions spread out, antipodes included
+
+
+def test_b0_normalisation():
+    x = np.full(50, 0.5)
+    # without n_b0, exactly the draws of rician
+    assert np.array_equal(sampling.noisy(x, 0.05, np.random.default_rng(1)),
+                          sampling.rician(x, 0.05, np.random.default_rng(1)))
+    # one noisy b=0 scales S/S0 by 1 ± sigma, more b=0s by less
+    r = np.random.default_rng(2)
+    spread = [np.std([sampling.noisy(x, 0.05, r, (n, n)).mean() / 0.5 for _ in range(2000)]) for n in (1, 10)]
+    assert 0.045 < spread[0] < 0.06 and spread[1] < 0.03

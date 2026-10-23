@@ -21,10 +21,12 @@ def boxes(ax, data, positions, width, colour):
 
 
 def losses(curves):
+    # one colour per curve, train and val included
     fig, ax = plt.subplots(figsize=(7, 4))
-    for (name, (train, val)), c in zip(curves.items(), colours(curves).values()):
-        ax.plot(train, color=c, label=f'{name} train')
-        ax.plot(val, '--', color=c, label=f'{name} val')
+    lines = {f'{name} {split}': loss for name, (train, val) in curves.items()
+             for split, loss in (('train', train), ('val', val))}
+    for (label, loss), c in zip(lines.items(), colours(lines).values()):
+        ax.plot(loss, color=c, label=label)
     ax.set(xlabel='epoch', ylabel='MSE', yscale='log')
     ax.grid(alpha=0.3, which='both')
     ax.legend()

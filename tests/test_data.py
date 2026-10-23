@@ -30,7 +30,7 @@ def test_split_by_voxel():
 
 def test_cloud_dataset_is_reproducible_and_changes_with_epoch():
     s = random_set()[0]
-    ds = data.CloudDataset(s, snr=(10, 40), p_drop=0.5, max_pts=64)
+    ds = data.CloudDataset(s, sigma=(0, 0.1), p_drop=0.5, max_pts=64)
     a, b = ds[3][0], ds[3][0]
     ds.epoch = 1
     assert torch.equal(a, b) and len(a) <= 64 and not torch.equal(a, ds[3][0])

@@ -17,13 +17,15 @@ p.add_argument('--tnet', action='store_true', help='pointnet only')
 p.add_argument('--mirror', action='store_true', help='pointnet only: antipodal invariance by adding -g copies')
 p.add_argument('--max_pts', type=int, default=128, help='same for every model compared; pairwise cost grows as n²')
 p.add_argument('--nvox', type=int, help='train on this many voxels only (training-set size ablation)')
+p.add_argument('--n_b0', type=int, nargs=2, metavar=('MIN', 'MAX'), default=[1, 10],
+               help='normalise by the mean of MIN-MAX noisy b=0s (random per sample), as real S/S0')
 p.add_argument('--epochs', type=int, default=1000)
 p.add_argument('--batch_size', type=int, default=64)
 p.add_argument('--workers', type=int, default=0)
 p.add_argument('--seed', type=int, default=0)
 a = p.parse_args()
 
-snr = (10, 40)
+sigma = (0, 0.1)                   # noise level 1/SNR ~ U: from noise-free to SNR 10
 p_drop, fdrop = 0.5, (0, 0.5)      # point dropout, not for mlp
 n_weights = 801859                 # mlp width is solved to match the PointNets
 lr, lr_decay, lr_step, grad_clip = 2.5e-3, 0.99, 5, 1.0
@@ -40,12 +42,12 @@ if a.nvox:
 if a.model == 'mlp':
     nmeas = len(s['bvals'])
     hidden = [models.mlp_width(nmeas, 3, n_weights)] * 3
-    train_ds = data.SignalDataset(s, train_idx, snr=snr, seed=a.seed)
-    val_ds = data.SignalDataset(s, val_idx, snr=snr, seed=a.seed + 1)
+    train_ds = data.SignalDataset(s, train_idx, sigma=sigma, seed=a.seed, n_b0=a.n_b0)
+    val_ds = data.SignalDataset(s, val_idx, sigma=sigma, seed=a.seed + 1, n_b0=a.n_b0)
     collate = None
 else:
     nmeas, hidden = None, None
-    kw = dict(snr=snr, p_drop=p_drop, fdrop=fdrop, max_pts=a.max_pts)
+    kw = dict(sigma=sigma, p_drop=p_drop, fdrop=fdrop, max_pts=a.max_pts, n_b0=a.n_b0)
     train_ds = data.CloudDataset(s, train_idx, seed=a.seed, **kw)
     val_ds = data.CloudDataset(s, val_idx, seed=a.seed + 1, **kw)
     collate = data.pad_collate
@@ -54,9 +56,9 @@ train_loader = DataLoader(train_ds, a.batch_size, shuffle=True, collate_fn=colla
 val_loader = DataLoader(val_ds, a.batch_size, collate_fn=collate, num_workers=a.workers)
 
 cfg = dict(model=a.model, tnet=a.tnet, mirror=a.mirror, nmeas=nmeas, hidden=hidden, max_pts=a.max_pts,
-           bmax=data.BMAX, trainset=a.trainset, nvox=a.nvox, n_train=len(train_ds), snr=snr, p_drop=p_drop,
-           fdrop=fdrop, n_val=n_val, epochs=a.epochs, batch_size=a.batch_size, lr=lr, lr_decay=lr_decay,
-           lr_step=lr_step, grad_clip=grad_clip, seed=a.seed)
+           bmax=data.BMAX, trainset=a.trainset, nvox=a.nvox, n_train=len(train_ds), sigma=sigma,
+           p_drop=p_drop, fdrop=fdrop, n_b0=a.n_b0, n_val=n_val, epochs=a.epochs, batch_size=a.batch_size,
+           lr=lr, lr_decay=lr_decay, lr_step=lr_step, grad_clip=grad_clip, seed=a.seed)
 if a.model == 'mlp':
     cfg['protocol'] = dict(bvals=s['bvals'].tolist(), bvecs=s['bvecs'].tolist())
 dev = models.device()

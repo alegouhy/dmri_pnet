@@ -13,9 +13,11 @@ run as finished) and `loss.png`.
   points (the same small networks are applied to each point or pair); the MLP width is solved to match.
 - **Optimisation**: Adam, learning rate 2.5e-3 multiplied by 0.99 every 5 epochs, gradient clipping at 1,
   batch 64, 1000 epochs.
-- **Augmentation, drawn afresh each epoch**: Rician noise with SNR ~ U(10, 40); for the set networks, point
-  dropout (probability 0.5, a fraction U(0, 0.5) of the points removed) and a random subset of `max_pts`
-  points.
+- **Augmentation, drawn afresh each epoch**: Rician noise of level σ = 1/SNR ~ U(0, 0.1), from noise-free
+  to SNR 10; for the set networks, point dropout (probability 0.5, a fraction U(0, 0.5) of the points
+  removed) and a random subset of `max_pts` points. The noisy signal is then divided, as S/S0 is in real
+  data, by the mean of 1–10 noisy b=0s (number drawn per sample) rather than by the true S0 = 1
+  (`--n_b0 MIN MAX` to change the range).
 - **Validation**: 500 voxels held out of the training set, with all their protocols; the saved model is the
   epoch with the lowest validation loss.
 - **Resuming**: rerunning the same command resumes from `checkpoint.pt`. A run refuses to resume with
