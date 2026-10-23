@@ -1,0 +1,10 @@
+numpy
+scipy
+pandas
+torch
+nibabel
+matplotlib
+plotly
+dmipy
+threadpoolctl
+pytest

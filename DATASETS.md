@@ -1,0 +1,111 @@
+# Datasets
+
+The simulated datasets of the paper. Each one is made by one `simulate.py` command, run from the
+repository root, and saved to `data/synth/<name>.npz` (under `$DMRI_PNET_ROOT` if set). The file keeps a
+record of the command, the code version and the date (`np.load(f)['args']`).
+
+## Common to all
+
+- **Parameters**: NDI, ODI and FWF drawn independently from U(0.025, 0.975); fibre orientation uniform on
+  the sphere. On a grid set, (NDI, ODI, FWF) take the values of an N³ grid over the same range, each repeated
+  NREP times with a fresh orientation.
+- **Signal**: NODDI-Watson in the NODDI toolbox formulation (dmipy compartments, extra-neurite zeppelin with
+  Watson-averaged diffusivities), d∥ = 1.7 and d_iso = 3.0 µm²/ms, normalised so that S(b=0) = 1. b=0 is
+  not stored.
+- **Noise**: the stored signals are noise-free. Test sets also store a Rician-noise copy per SNR
+  (σ = 1/SNR), seeded. Training adds noise on the fly.
+- **Random protocols**: per sample, a number of shells, a b-value per shell drawn uniformly, and a number of
+  directions per shell, with directions uniformly random on the sphere. Default ranges: 2–5 shells,
+  b in 250–5000 s/mm², 12–128 directions per shell (mean ~245 measurements, at most 640).
+- **Fixed protocols**: `ukb` b = 1000/2000 s/mm² × 50 electrostatically spread directions; `hardi` b = 2000
+  × 60; `dsi` Cartesian q-space grid of radius 5 (514 measurements, 22 shells, b 250–5000); `sub-01` copies
+  the acquisition of the MOTIF-STROKE subject (b = 500/1000/1700/3200, 195 measurements), read from
+  `data/real/philippe/sub-01/sub-01_desc-MSEddyCorrected_dwi.{bval,bvec}`, which must be present.
+
+## Training sets
+
+| Name | Samples | Protocol | Used by |
+|---|---|---|---|
+| `train` | 20,000 voxels × 10 random protocols = 200,000 | random, default ranges | set networks, most ablations |
+| `train_narrow` | 20,000 × 10 = 200,000 | random, 2–3 shells, b 500–3000, 30–64 directions | ablation: narrower protocol prior |
+| `ukb_train` | 200,000 voxels | `ukb` | `mlp_ukb` |
+| `motif_train` | 200,000 voxels | `sub-01` | `mlp_motif` |
+
+Each voxel of `train` is seen through 10 different protocols, so the network learns what the signal means
+for the tissue rather than for one acquisition. The MLP sets have as many samples as `train`. No noise is
+stored.
+
+```bash
+python simulate.py --name train --protocol random --nvox 20000 --nprotoc 10 --seed 0
+```
+
+```bash
+python simulate.py --name train_narrow --protocol random --nvox 20000 --nprotoc 10 --nshell 2 3 --b 500 3000 --ndir 30 64 --seed 100
+```
+
+```bash
+python simulate.py --name ukb_train --protocol ukb --nvox 200000 --seed 1
+```
+
+```bash
+python simulate.py --name motif_train --protocol sub-01 --nvox 200000 --seed 2
+```
+
+## Test sets
+
+10,000 voxels each, noise-free signals plus noisy copies at SNR 20, 30 and 40.
+
+| Name | Protocol | Inside the training protocols? | Used by |
+|---|---|---|---|
+| `ukb_test` | `ukb` (100 measurements, 2 shells) | yes | E1, E2, E4, A |
+| `motif_test` | `sub-01` (195 measurements, 4 shells) | yes | E1, E2, E5, A |
+| `dsi_test` | `dsi` (514 measurements, 22 shells) | no: too many shells | E3, E5 |
+| `hardi_test` | `hardi` (60 measurements, 1 shell) | no: one shell | E3, E4 |
+| `random_test` | one random protocol per voxel, default ranges | yes | E3 |
+
+```bash
+python simulate.py --name ukb_test --protocol ukb --nvox 10000 --snrs 20 30 40 --seed 10
+```
+
+```bash
+python simulate.py --name motif_test --protocol sub-01 --nvox 10000 --snrs 20 30 40 --seed 11
+```
+
+```bash
+python simulate.py --name dsi_test --protocol dsi --nvox 10000 --snrs 20 30 40 --seed 12
+```
+
+```bash
+python simulate.py --name hardi_test --protocol hardi --nvox 10000 --snrs 20 30 40 --seed 13
+```
+
+```bash
+python simulate.py --name random_test --protocol random --nvox 10000 --snrs 20 30 40 --seed 14
+```
+
+## Grid sets (E6)
+
+5³ = 125 parameter combinations × 100 orientations = 12,500 samples, noisy copy at SNR 30.
+
+```bash
+python simulate.py --name ukb_grid --protocol ukb --grid 5 100 --snrs 30 --seed 20
+```
+
+```bash
+python simulate.py --name motif_grid --protocol sub-01 --grid 5 100 --snrs 30 --seed 21
+```
+
+## Cost
+
+Simulation is single-threaded. `train` and `train_narrow` take ~1.5 h each (one dmipy acquisition scheme
+per sample) and give ~1 GB files; `random_test` ~5 min; the others a few minutes. 8 GB of memory is enough
+for any of them. They are independent and can run in parallel.
+
+For a quick test of the pipeline, use the same commands with `--nvox 300` (and `--grid 3 2`) and a
+separate `DMRI_PNET_ROOT`.
+
+## Derived sets (made locally, not on the cluster)
+
+`experiments.py` makes copies of test sets with the same voxels and noise (`derive.py`): `ukb_test` and
+`hardi_test` rotated, flipped and permuted (E4); `motif_test` cut to 24/48/96 measurements, `dsi_test` to
+64/128/256, and `motif_test` reduced to shells b 500 + 3200 or b 1700 + 3200 (E5).
