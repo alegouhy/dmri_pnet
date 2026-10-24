@@ -27,31 +27,36 @@ record of the command, the code version and the date (`np.load(f)['args']`).
 
 | Name | Samples | Protocol | Used by |
 |---|---|---|---|
-| `train` | 200,000 voxels, each with its own random protocol | random, default ranges | set networks, most ablations |
-| `train_narrow` | 200,000 voxels, each with its own random protocol | random, 2–3 shells, b 500–3000, 30–64 directions | ablation: narrower protocol prior |
-| `ukb_train` | 200,000 voxels | `ukb` | `mlp_ukb` |
-| `motif_train` | 200,000 voxels | `sub-01` | `mlp_motif` |
+| `train` | 1,000,000 voxels × 1 random protocol | random, default ranges | set networks, most ablations |
+| `train_multi` | 100,000 voxels × 10 random protocols = 1,000,000 | random, default ranges | ablation: several protocols per voxel |
+| `train_narrow` | 1,000,000 voxels × 1 random protocol | random, 2–3 shells, b 500–3000, 30–64 directions | ablation: narrower protocol prior |
+| `ukb_train` | 1,000,000 voxels | `ukb` | `mlp_ukb` |
+| `motif_train` | 1,000,000 voxels | `sub-01` | `mlp_motif` |
 
-Every voxel of `train` has its own random protocol, so the network learns what the signal means for the
-tissue rather than for one acquisition. One protocol per voxel rather than several (`--nprotoc`) keeps the
-number of distinct voxels, hence of distinct targets, as large as the number of samples: with 20,000 voxels ×
-10 protocols the set networks memorised the training voxels. The MLP sets have as many samples as `train`. No
-noise is stored.
+Every sample has its own random protocol, so the network learns what the signal means for the tissue rather
+than for one acquisition. `train_multi` tests whether seeing the same voxel through several protocols pushes
+it further towards the physics: with the per-sample loss, nothing ties a voxel's samples together, and the
+repetition gives 10× fewer distinct targets to learn from (with 20,000 voxels × 10 protocols the set networks
+memorised the training voxels). It has as many samples as `train`. So do the MLP sets. No noise is stored.
 
 ```bash
-python simulate.py --name train --protocol random --nvox 200000 --seed 0
+python simulate.py --name train --protocol random --nvox 1000000 --seed 0
 ```
 
 ```bash
-python simulate.py --name train_narrow --protocol random --nvox 200000 --nshell 2 3 --b 500 3000 --ndir 30 64 --seed 100
+python simulate.py --name train_multi --protocol random --nvox 100000 --nprotoc 10 --seed 3
 ```
 
 ```bash
-python simulate.py --name ukb_train --protocol ukb --nvox 200000 --seed 1
+python simulate.py --name train_narrow --protocol random --nvox 1000000 --nshell 2 3 --b 500 3000 --ndir 30 64 --seed 100
 ```
 
 ```bash
-python simulate.py --name motif_train --protocol sub-01 --nvox 200000 --seed 2
+python simulate.py --name ukb_train --protocol ukb --nvox 1000000 --seed 1
+```
+
+```bash
+python simulate.py --name motif_train --protocol sub-01 --nvox 1000000 --seed 2
 ```
 
 ## Test sets
@@ -100,9 +105,9 @@ python simulate.py --name motif_grid --protocol sub-01 --grid 5 100 --snrs 30 --
 
 ## Cost
 
-Simulation is single-threaded. `train` and `train_narrow` take ~1.5 h each (one dmipy acquisition scheme
-per sample) and give ~1 GB files; `random_test` ~5 min; the others a few minutes. 8 GB of memory is enough
-for any of them. They are independent and can run in parallel.
+Simulation is single-threaded. `train`, `train_multi` and `train_narrow` take ~2 h each (one dmipy
+acquisition scheme per sample, ~25 min per 200,000 samples) and give ~5 GB files, with a peak of ~12 GB of
+memory; `random_test` ~5 min; the others a few minutes. They are independent and can run in parallel.
 
 For a quick test of the pipeline, use the same commands with `--nvox 300` (and `--grid 3 2`) and a
 separate `DMRI_PNET_ROOT`.

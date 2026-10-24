@@ -30,7 +30,7 @@ p_drop, fdrop = 0.5, (0, 0.5)      # point dropout, not for mlp
 n_weights = 803907                 # mlp width is solved to match the PointNets
 lr, lr_warmup, lr_decay, lr_step, grad_clip = 1e-3, 5, 0.99, 5, 1.0
 stall = 20                         # epochs of an unchanged train loss: a dead network
-save_every = 10
+save_every, keep_every = 10, 100   # checkpoint to resume from; weights kept for good
 
 torch.manual_seed(a.seed)
 s = data.load_set(paths.synth(a.trainset))
@@ -128,6 +128,8 @@ for epoch in range(start, a.epochs):
     # the evaluated weights are the ones the validation split chose
     if val_losses[-1] == min(val_losses):
         torch.save(model.state_dict(), os.path.join(rundir, 'model.pt'))
+    if (epoch + 1) % keep_every == 0:
+        torch.save(model.state_dict(), os.path.join(rundir, f'model_e{epoch + 1:04d}.pt'))
     if (epoch + 1) % save_every == 0 or epoch + 1 == a.epochs:
         torch.save(dict(epoch=epoch + 1, model=model.state_dict(), optimiser=optimiser.state_dict(),
                         scheduler=scheduler.state_dict(), train_losses=train_losses, val_losses=val_losses),

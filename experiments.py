@@ -18,7 +18,8 @@ p.add_argument('--dry-run', action='store_true', help='print the steps without r
 a = p.parse_args()
 
 SNRS = [20, 30, 40]
-# training runs (MODELS.md): set networks at 128 and 256 points, MLPs, ablations at 128 points
+# training runs (MODELS.md): set networks at 128 and 256 points, MLPs, ablations at 128 points, and
+# pointnet_n256_multi (10 protocols per voxel) against pointnet_n256 (one)
 MAIN = ['pointnet_n128', 'pairwise_n128', 'pointnet_n256', 'pairwise_n256']
 MLP = {'ukb': 'mlp_ukb', 'motif': 'mlp_motif'}
 ABLATED = ['pointnet_mirror', 'pointnet_tnet', 'pairwise_n64', 'pairwise_v10pc', 'pairwise_v30pc', 'pairwise_narrow']
@@ -167,8 +168,12 @@ def E8():
 
 def ablations():
     # mirroring and T-Net (vanilla), max_pts, training-set size, breadth of the protocol prior; reference: 128 points
+    # several protocols per voxel: should help most on the protocols unlike the training ones
+    multi = ['pointnet_n256', 'pointnet_n256_multi']
     for test in MLP:
-        yield from evaluate('A', f'{test}_test', 30, ['pointnet_n128', 'pairwise_n128'] + ABLATED)
+        yield from evaluate('A', f'{test}_test', 30, ['pointnet_n128', 'pairwise_n128'] + ABLATED + multi)
+    for test in ['dsi', 'hardi', 'random']:
+        yield from evaluate('A', f'{test}_test', 30, multi)
 
 
 EXPERIMENTS = dict(E1=E1, E2=E2, E3=E3, E4=E4, E5=E5, E6=E6, E7=E7, E8=E8, A=ablations)

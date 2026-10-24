@@ -3,7 +3,8 @@
 The training runs of the paper. Each one is one `train.py` command, run from the repository root once its
 training set exists (see `DATASETS.md`), and writes `runs/<run>/` (under `$DMRI_PNET_ROOT` if set):
 `config.json` (settings, code version, date, and the training set's record), `model.pt` (weights of the
-best validation epoch), `checkpoint.pt` (every 10 epochs), `losses.npz` (written at the end: it marks the
+best validation epoch), `model_e0100.pt` … `model_e1000.pt` (weights every 100 epochs), `checkpoint.pt`
+(every 10 epochs, to resume from), `losses.npz` (written at the end: it marks the
 run as finished) and `loss.png`.
 
 ## Common to all
@@ -85,9 +86,10 @@ At 128 points, compared with `pointnet_n128` and `pairwise_n128`.
 | `pointnet_mirror` | `--mirror` | does built-in antipodal symmetry help the vanilla model? |
 | `pointnet_tnet` | `--tnet` (3,460,492 weights) | do the T-Nets of the original PointNet (and the abstract) help? |
 | `pairwise_n64` | `--max_pts 64` | how much does seeing fewer points cost? |
-| `pairwise_v10pc` | `--nvox 19500` | training on 10% of the voxels |
-| `pairwise_v30pc` | `--nvox 58500` | training on 30% of the voxels |
+| `pairwise_v10pc` | `--nvox 99500` | training on 10% of the voxels |
+| `pairwise_v30pc` | `--nvox 298500` | training on 30% of the voxels |
 | `pairwise_narrow` | `--trainset train_narrow` | training on a narrower protocol distribution |
+| `pointnet_n256_multi` | `--max_pts 256 --trainset train_multi`, against `pointnet_n256` | does seeing each voxel through 10 protocols (10× fewer voxels) teach the physics better? Tested on unseen protocols too |
 
 ```bash
 python train.py --run pointnet_mirror --model pointnet --mirror
@@ -102,27 +104,30 @@ python train.py --run pairwise_n64 --model pairwise --max_pts 64
 ```
 
 ```bash
-python train.py --run pairwise_v10pc --model pairwise --nvox 19500
+python train.py --run pairwise_v10pc --model pairwise --nvox 99500
 ```
 
 ```bash
-python train.py --run pairwise_v30pc --model pairwise --nvox 58500
+python train.py --run pairwise_v30pc --model pairwise --nvox 298500
 ```
 
 ```bash
 python train.py --run pairwise_narrow --model pairwise --trainset train_narrow
 ```
 
+```bash
+python train.py --run pointnet_n256_multi --model pointnet --max_pts 256 --trainset train_multi
+```
+
 ## Cost
 
-One GPU per run. An epoch is ~3,050 steps (195,000 training samples, batch 64). Measured on a laptop GPU
-(Apple M-series, batch 64): one step takes 11 ms for `pointnet` at 128 points, 20 ms at 256; 175 ms for
-`pairwise` at 128 and ~1 s at 256. A datacentre GPU is several times faster, but `pairwise_n256` will likely
-exceed a 24 h job: rerun the same command to resume. A run with `--epochs 1` under a separate `--run` name
-gives the real time per epoch first. The MLPs take minutes.
+One GPU per run. An epoch is ~15,550 steps (995,000 training samples, batch 64). On a Blackwell RTX PRO
+6000, 1000 epochs take ~8 h for `pointnet` (~12 h with `--tnet`), ~5 h for the MLPs, ~10 h for `pairwise` at
+64 points, ~29 h at 128 and ~4.5 days at 256: past the 3-day job limit, rerun the same command to resume. A
+run with `--epochs 1` under a separate `--run` name gives the real time per epoch first.
 
 GPU memory (pairwise, activations kept for the backward pass): 1.1 GB at 128 points, 4.2 GB at 256, so
-peaks of ~2–3 and ~8–10 GB; `pointnet` and the MLPs need far less. Host memory: the training set (~1 GB)
-plus PyTorch, 16 GB is plenty. Data loading runs in the main process by default (`--workers` to change).
+peaks of ~2–3 and ~8–10 GB; `pointnet` and the MLPs need far less. Host memory: the training set (~5 GB)
+plus PyTorch and the loader workers, 48 GB is plenty. Data loading runs in the main process by default (`--workers` to change).
 
 For a quick test of the pipeline, add `--epochs 2` and use a separate `DMRI_PNET_ROOT`.
