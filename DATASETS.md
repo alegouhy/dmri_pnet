@@ -27,21 +27,23 @@ record of the command, the code version and the date (`np.load(f)['args']`).
 
 | Name | Samples | Protocol | Used by |
 |---|---|---|---|
-| `train` | 20,000 voxels × 10 random protocols = 200,000 | random, default ranges | set networks, most ablations |
-| `train_narrow` | 20,000 × 10 = 200,000 | random, 2–3 shells, b 500–3000, 30–64 directions | ablation: narrower protocol prior |
+| `train` | 200,000 voxels, each with its own random protocol | random, default ranges | set networks, most ablations |
+| `train_narrow` | 200,000 voxels, each with its own random protocol | random, 2–3 shells, b 500–3000, 30–64 directions | ablation: narrower protocol prior |
 | `ukb_train` | 200,000 voxels | `ukb` | `mlp_ukb` |
 | `motif_train` | 200,000 voxels | `sub-01` | `mlp_motif` |
 
-Each voxel of `train` is seen through 10 different protocols, so the network learns what the signal means
-for the tissue rather than for one acquisition. The MLP sets have as many samples as `train`. No noise is
-stored.
+Every voxel of `train` has its own random protocol, so the network learns what the signal means for the
+tissue rather than for one acquisition. One protocol per voxel rather than several (`--nprotoc`) keeps the
+number of distinct voxels, hence of distinct targets, as large as the number of samples: with 20,000 voxels ×
+10 protocols the set networks memorised the training voxels. The MLP sets have as many samples as `train`. No
+noise is stored.
 
 ```bash
-python simulate.py --name train --protocol random --nvox 20000 --nprotoc 10 --seed 0
+python simulate.py --name train --protocol random --nvox 200000 --seed 0
 ```
 
 ```bash
-python simulate.py --name train_narrow --protocol random --nvox 20000 --nprotoc 10 --nshell 2 3 --b 500 3000 --ndir 30 64 --seed 100
+python simulate.py --name train_narrow --protocol random --nvox 200000 --nshell 2 3 --b 500 3000 --ndir 30 64 --seed 100
 ```
 
 ```bash

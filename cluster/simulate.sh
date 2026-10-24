@@ -9,8 +9,8 @@
 
 cd "${SLURM_SUBMIT_DIR:-.}"
 TASKS=(
-  "--name train --protocol random --nvox 20000 --nprotoc 10 --seed 0"
-  "--name train_narrow --protocol random --nvox 20000 --nprotoc 10 --nshell 2 3 --b 500 3000 --ndir 30 64 --seed 100"
+  "--name train --protocol random --nvox 200000 --seed 0"
+  "--name train_narrow --protocol random --nvox 200000 --nshell 2 3 --b 500 3000 --ndir 30 64 --seed 100"
   "--name ukb_train --protocol ukb --nvox 200000 --seed 1"
   "--name ukb_test --protocol ukb --nvox 10000 --snrs 20 30 40 --n_b0 1 10 --seed 10"
   "--name dsi_test --protocol dsi --nvox 10000 --snrs 20 30 40 --n_b0 1 10 --seed 12"

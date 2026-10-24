@@ -1,5 +1,6 @@
 # All models output [ndi, odi, fwf] through a sigmoid and have ~0.80M weights.
-# No BatchNorm: batch statistics would depend on the duplicated padding.
+# No BatchNorm: batch statistics would depend on the duplicated padding. A LayerNorm (per sample) on each
+# max-pooled feature keeps the layers after the pooling from blowing up and saturating the sigmoid for good.
 
 import os
 import json
@@ -19,6 +20,11 @@ def mlp(*sizes):
     return nn.Sequential(*layers)
 
 
+def pooled(*sizes):
+    # the MLP applied after a max over points
+    return nn.Sequential(nn.LayerNorm(sizes[0]), mlp(*sizes))
+
+
 def head(n_in, n_out=3):
     return nn.Sequential(nn.Linear(n_in, n_out), nn.Sigmoid())
 
@@ -29,7 +35,7 @@ class TNet(nn.Module):
         super().__init__()
         self.k = k
         self.net = mlp(k, 64, 128, 1024)
-        self.glob = mlp(1024, 512, 256)
+        self.glob = pooled(1024, 512, 256)
         self.out = nn.Linear(256, k * k)
         nn.init.zeros_(self.out.weight)
         self.out.bias.data = torch.eye(k).flatten()
@@ -48,7 +54,7 @@ class PointNet(nn.Module):
         self.local1 = mlp(5, 64, 64)
         self.tnet_feat = TNet(64) if tnet else None
         self.local2 = mlp(64, 128, 1024)
-        self.glob = mlp(1024, 512, 256)
+        self.glob = pooled(1024, 512, 256)
         self.head = head(256)
 
     def forward(self, x):
@@ -69,7 +75,7 @@ class PairwisePointNet(nn.Module):
         super().__init__()
         self.pair = mlp(5, 64, 64)
         self.local = mlp(64, 128, 1024)
-        self.glob = mlp(1024, 512, 256)
+        self.glob = pooled(1024, 512, 256)
         self.head = head(256)
 
     def forward(self, x):

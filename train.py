@@ -27,13 +27,14 @@ a = p.parse_args()
 
 sigma = (0, 0.1)                   # noise level 1/SNR ~ U: from noise-free to SNR 10
 p_drop, fdrop = 0.5, (0, 0.5)      # point dropout, not for mlp
-n_weights = 801859                 # mlp width is solved to match the PointNets
-lr, lr_decay, lr_step, grad_clip = 2.5e-3, 0.99, 5, 1.0
+n_weights = 803907                 # mlp width is solved to match the PointNets
+lr, lr_warmup, lr_decay, lr_step, grad_clip = 1e-3, 5, 0.99, 5, 1.0
+stall = 20                         # epochs of an unchanged train loss: a dead network
 save_every = 10
 
 torch.manual_seed(a.seed)
 s = data.load_set(paths.synth(a.trainset))
-n_val = min(500, len(np.unique(s['voxel'])) // 10)    # held-out voxels
+n_val = min(5000, len(np.unique(s['voxel'])) // 10)   # held-out voxels
 train_idx, val_idx = data.split(s, n_val, a.seed)
 if a.nvox:
     keep = np.random.default_rng(a.seed).permutation(np.unique(s['voxel'][train_idx]))[:a.nvox]
@@ -58,7 +59,7 @@ val_loader = DataLoader(val_ds, a.batch_size, collate_fn=collate, num_workers=a.
 cfg = dict(model=a.model, tnet=a.tnet, mirror=a.mirror, nmeas=nmeas, hidden=hidden, max_pts=a.max_pts,
            bmax=data.BMAX, trainset=a.trainset, nvox=a.nvox, n_train=len(train_ds), sigma=sigma,
            p_drop=p_drop, fdrop=fdrop, n_b0=a.n_b0, n_val=n_val, epochs=a.epochs, batch_size=a.batch_size,
-           lr=lr, lr_decay=lr_decay, lr_step=lr_step, grad_clip=grad_clip, seed=a.seed)
+           lr=lr, lr_warmup=lr_warmup, lr_decay=lr_decay, lr_step=lr_step, grad_clip=grad_clip, seed=a.seed)
 if a.model == 'mlp':
     cfg['protocol'] = dict(bvals=s['bvals'].tolist(), bvecs=s['bvecs'].tolist())
 dev = models.device()
@@ -83,7 +84,9 @@ print(f'{a.run}: {len(train_ds)} train / {len(val_ds)} val samples, {cfg["n_weig
 
 criterion = nn.MSELoss()
 optimiser = torch.optim.Adam(model.parameters(), lr=lr)
-scheduler = torch.optim.lr_scheduler.StepLR(optimiser, lr_step, lr_decay)
+# linear warm-up over lr_warmup epochs, then x lr_decay every lr_step epochs
+scheduler = torch.optim.lr_scheduler.LambdaLR(
+    optimiser, lambda e: min(1, (e + 1) / lr_warmup) * lr_decay ** (e // lr_step))
 
 ckptfile = os.path.join(rundir, 'checkpoint.pt')
 start, train_losses, val_losses = 0, [], []
@@ -118,6 +121,9 @@ for epoch in range(start, a.epochs):
     scheduler.step()
     print(f'epoch {epoch + 1:4d} | train {train_losses[-1]:.4f} | val {val_losses[-1]:.4f} | '
           f'lr {scheduler.get_last_lr()[0]:.2e}', flush=True)
+
+    if len(train_losses) >= stall and np.ptp(train_losses[-stall:]) < 1e-6:
+        sys.exit(f'{a.run}: train loss unchanged for {stall} epochs, the network is dead')
 
     # the evaluated weights are the ones the validation split chose
     if val_losses[-1] == min(val_losses):

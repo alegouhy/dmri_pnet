@@ -18,8 +18,8 @@ TASKS=(
   "--run pointnet_mirror --model pointnet --mirror"
   "--run pointnet_tnet --model pointnet --tnet"
   "--run pairwise_n64 --model pairwise --max_pts 64"
-  "--run pairwise_v10pc --model pairwise --nvox 2000"
-  "--run pairwise_v30pc --model pairwise --nvox 6000"
+  "--run pairwise_v10pc --model pairwise --nvox 19500"
+  "--run pairwise_v30pc --model pairwise --nvox 58500"
   "--run pairwise_narrow --model pairwise --trainset train_narrow"
   "--run mlp_motif --model mlp --trainset motif_train"
 )

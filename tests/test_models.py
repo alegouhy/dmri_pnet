@@ -49,6 +49,6 @@ def test_rotation(model):
 
 def test_weight_budget():
     n = lambda m: sum(p.numel() for p in m.parameters())
-    w = models.mlp_width(100, 3, 801859)
-    assert n(models.PointNet()) == n(models.PairwisePointNet()) == 801859
-    assert abs(n(models.SignalMLP(100, [w] * 3)) - 801859) / 801859 < 0.002
+    w = models.mlp_width(100, 3, 803907)
+    assert n(models.PointNet()) == n(models.PairwisePointNet()) == 803907
+    assert abs(n(models.SignalMLP(100, [w] * 3)) - 803907) / 803907 < 0.002
