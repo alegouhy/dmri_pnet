@@ -8,6 +8,8 @@
 #SBATCH --output=logs/predict_%A_%a.out
 
 cd "${SLURM_SUBMIT_DIR:-.}"
+# the repository's .venv if there is one, else the environment inherited from the submitting shell
+if [ -f .venv/bin/activate ]; then source .venv/bin/activate; fi
 TASKS=()
 for subject in sub-01 antoine sub-05r1 sub-05r2fewdir sub-05r2manydir; do
   runs="pointnet_n128 pointnet_n256 pairwise_n128 pairwise_n256"

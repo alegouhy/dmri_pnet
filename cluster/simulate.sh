@@ -9,6 +9,8 @@
 #SBATCH --output=logs/simulate_%A_%a.out
 
 cd "${SLURM_SUBMIT_DIR:-.}"
+# the repository's .venv if there is one, else the environment inherited from the submitting shell
+if [ -f .venv/bin/activate ]; then source .venv/bin/activate; fi
 TASKS=(
   "--name train --protocol random --nvox 1000000 --seed 0"
   "--name train_multi --protocol random --nvox 100000 --nprotoc 10 --seed 3"

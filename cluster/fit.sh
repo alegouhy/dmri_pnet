@@ -8,6 +8,8 @@
 #SBATCH --output=logs/fit_%A_%a.out
 
 cd "${SLURM_SUBMIT_DIR:-.}"
+# the repository's .venv if there is one, else the environment inherited from the submitting shell
+if [ -f .venv/bin/activate ]; then source .venv/bin/activate; fi
 TASKS=()
 for test in ukb motif dsi hardi random; do
   for snr in 20 30 40; do TASKS+=("--set ${test}_test --snr $snr"); done

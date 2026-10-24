@@ -10,6 +10,8 @@
 #SBATCH --output=logs/train_%A_%a.out
 
 cd "${SLURM_SUBMIT_DIR:-.}"
+# the repository's .venv if there is one, else the environment inherited from the submitting shell
+if [ -f .venv/bin/activate ]; then source .venv/bin/activate; fi
 TASKS=(
   "--run pointnet_n128 --model pointnet --max_pts 128"
   "--run pointnet_n256 --model pointnet --max_pts 256"
