@@ -22,7 +22,8 @@ SNRS = [20, 30, 40]
 # pointnet_n256_multi (10 protocols per voxel) against pointnet_n256 (one)
 MAIN = ['pointnet_n128', 'pairwise_n128', 'pointnet_n256', 'pairwise_n256']
 MLP = {'ukb': 'mlp_ukb', 'motif': 'mlp_motif'}
-ABLATED = ['pointnet_mirror', 'pointnet_tnet', 'pairwise_n64', 'pairwise_v10pc', 'pairwise_v30pc', 'pairwise_narrow']
+ABLATED = ['pointnet_mirror', 'pointnet_tnet', 'pointnet_tnet_small', 'pairwise_n64', 'pairwise_v10pc', 'pairwise_v30pc',
+           'pairwise_narrow']
 # copies of a test set with the same voxels and noise (derive.py)
 DERIVED = {**{f'{t}_{op}': (f'{t}_test', ['--' + op]) for t in ['ukb', 'hardi'] for op in ['rotate', 'flip', 'permute']},
            **{f'motif_keep{n}': ('motif_test', ['--keep', n]) for n in (24, 48, 96)},
@@ -167,7 +168,8 @@ def E8():
 
 
 def ablations():
-    # mirroring and T-Net (vanilla), max_pts, training-set size, breadth of the protocol prior; reference: 128 points
+    # mirroring and T-Net (vanilla, and within the weight budget), max_pts, training-set size, breadth of the protocol
+    # prior; reference: 128 points
     # several protocols per voxel: should help most on the protocols unlike the training ones
     multi = ['pointnet_n256', 'pointnet_n256_multi']
     for test in MLP:

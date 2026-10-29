@@ -31,7 +31,8 @@ run as finished) and `loss.png`.
 - **`pointnet`**: per-point MLP 5 → 64 → 64 → 128 → 1024, max over points, LayerNorm, MLP 1024 → 512 → 256
   → 3. Input per point `[gx, gy, gz, sqrt(b/6000), S/S0]`. Permutation invariant only. Options: `--mirror`
   (adds the -g copy of each point: antipodal invariance), `--tnet` (input and feature transforms, as in the
-  original PointNet, with the same LayerNorm after their max).
+  original PointNet, with the same LayerNorm after their max), `--width` (scales every hidden size, T-Nets
+  included: 0.521 brings `--tnet` down to the weight budget).
 - **`pairwise`**: pair features `[(gi·gj)², bi+bj, bi·bj, Si+Sj, Si·Sj]` → MLP 5 → 64 → 64, max over j, MLP
   64 → 128 → 1024, max over i, LayerNorm, MLP 1024 → 512 → 256 → 3. Invariant to permutation, rotation and antipodal
   flips by construction. Memory and time grow as max_pts².
@@ -85,6 +86,7 @@ At 128 points, compared with `pointnet_n128` and `pairwise_n128`.
 |---|---|---|
 | `pointnet_mirror` | `--mirror` | does built-in antipodal symmetry help the vanilla model? |
 | `pointnet_tnet` | `--tnet` (3,460,492 weights) | do the T-Nets of the original PointNet (and the abstract) help? |
+| `pointnet_tnet_small` | `--tnet --width 0.521` (804,549 weights) | do they still help within the weight budget, or did `pointnet_tnet` gain from its size? |
 | `pairwise_n64` | `--max_pts 64` | how much does seeing fewer points cost? |
 | `pairwise_v10pc` | `--nvox 99500` | training on 10% of the voxels |
 | `pairwise_v30pc` | `--nvox 298500` | training on 30% of the voxels |
@@ -97,6 +99,10 @@ python train.py --run pointnet_mirror --model pointnet --mirror
 
 ```bash
 python train.py --run pointnet_tnet --model pointnet --tnet
+```
+
+```bash
+python train.py --run pointnet_tnet_small --model pointnet --tnet --width 0.521
 ```
 
 ```bash

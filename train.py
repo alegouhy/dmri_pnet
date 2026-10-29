@@ -15,6 +15,8 @@ p.add_argument('--trainset', default='train', help='data/synth/<trainset>.npz; m
 p.add_argument('--run', required=True)
 p.add_argument('--tnet', action='store_true', help='pointnet only')
 p.add_argument('--mirror', action='store_true', help='pointnet only: antipodal invariance by adding -g copies')
+p.add_argument('--width', type=float, default=1,
+               help='pointnet only: scales every hidden size; 0.521 brings --tnet down to the weight budget')
 p.add_argument('--max_pts', type=int, default=128, help='same for every model compared; pairwise cost grows as n²')
 p.add_argument('--nvox', type=int, help='train on this many voxels only (training-set size ablation)')
 p.add_argument('--n_b0', type=int, nargs=2, metavar=('MIN', 'MAX'), default=[1, 10],
@@ -56,8 +58,8 @@ else:
 train_loader = DataLoader(train_ds, a.batch_size, shuffle=True, collate_fn=collate, num_workers=a.workers)
 val_loader = DataLoader(val_ds, a.batch_size, collate_fn=collate, num_workers=a.workers)
 
-cfg = dict(model=a.model, tnet=a.tnet, mirror=a.mirror, nmeas=nmeas, hidden=hidden, max_pts=a.max_pts,
-           bmax=data.BMAX, trainset=a.trainset, nvox=a.nvox, n_train=len(train_ds), sigma=sigma,
+cfg = dict(model=a.model, tnet=a.tnet, mirror=a.mirror, width=a.width, nmeas=nmeas, hidden=hidden,
+           max_pts=a.max_pts, bmax=data.BMAX, trainset=a.trainset, nvox=a.nvox, n_train=len(train_ds), sigma=sigma,
            p_drop=p_drop, fdrop=fdrop, n_b0=a.n_b0, n_val=n_val, epochs=a.epochs, batch_size=a.batch_size,
            lr=lr, lr_warmup=lr_warmup, lr_decay=lr_decay, lr_step=lr_step, grad_clip=grad_clip, seed=a.seed)
 if a.model == 'mlp':

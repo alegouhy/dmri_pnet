@@ -6,7 +6,7 @@
 #SBATCH --job-name=pnet-train
 #SBATCH --partition=gpu --qos=gpu --gres=gpu:1 --constraint=RTX6000
 #SBATCH --cpus-per-task=5 --mem=48G --time=3-00:00:00
-#SBATCH --array=0-12
+#SBATCH --array=0-13
 #SBATCH --output=logs/train_%A_%a.out
 
 cd "${SLURM_SUBMIT_DIR:-.}"
@@ -25,6 +25,7 @@ TASKS=(
   "--run pairwise_v30pc --model pairwise --nvox 298500"
   "--run pairwise_narrow --model pairwise --trainset train_narrow"
   "--run pointnet_n256_multi --model pointnet --max_pts 256 --trainset train_multi"
+  "--run pointnet_tnet_small --model pointnet --tnet --width 0.521"
   "--run mlp_motif --model mlp --trainset motif_train"
 )
 

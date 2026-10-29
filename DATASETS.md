@@ -13,13 +13,15 @@ record of the command, the code version and the date (`np.load(f)['args']`).
   Watson-averaged diffusivities), d∥ = 1.7 and d_iso = 3.0 µm²/ms, normalised so that S(b=0) = 1. b=0 is
   not stored.
 - **Noise**: the stored signals are noise-free. Test sets also store a Rician-noise copy per SNR
-  (σ = 1/SNR), seeded, divided as S/S0 is in real data by the mean of 1–10 noisy b=0s (number drawn per
-  voxel, `--n_b0 1 10`). Training adds noise on the fly, the same way.
+  (σ = 1/SNR), seeded, divided as S/S0 is in real data by the mean of noisy b=0s: as many as the protocol
+  acquires for the fixed ones (`ukb` 5, `hardi` 6, `dsi` 1, e.g. `--n_b0 5 5`), 1–10 drawn per voxel
+  otherwise (`--n_b0 1 10`). Training adds noise on the fly, the same way, with 1–10.
 - **Random protocols**: per sample, a number of shells, a b-value per shell drawn uniformly, and a number of
   directions per shell, with directions uniformly random on the sphere. Default ranges: 2–5 shells,
   b in 250–5000 s/mm², 12–128 directions per shell (mean ~245 measurements, at most 640).
 - **Fixed protocols**: `ukb` b = 1000/2000 s/mm² × 50 electrostatically spread directions; `hardi` b = 2000
-  × 60; `dsi` Cartesian q-space grid of radius 5 (514 measurements, 22 shells, b 250–5000); `sub-01` copies
+  × 60; `dsi` the standard DSI-515 Cartesian q-space grid of radius 5 (514 measurements, 22 shells, b ∝ |q|²,
+  200–5000: the lowest shell is just below the training range); `sub-01` copies
   the acquisition of the MOTIF-STROKE subject (b = 500/1000/1700/3200, 195 measurements), read from
   `data/real/philippe/sub-01/sub-01_desc-MSEddyCorrected_dwi.{bval,bvec}`, which must be present.
 
@@ -72,7 +74,7 @@ python simulate.py --name motif_train --protocol sub-01 --nvox 1000000 --seed 2
 | `random_test` | one random protocol per voxel, default ranges | yes | E3 |
 
 ```bash
-python simulate.py --name ukb_test --protocol ukb --nvox 10000 --snrs 20 30 40 --n_b0 1 10 --seed 10
+python simulate.py --name ukb_test --protocol ukb --nvox 10000 --snrs 20 30 40 --n_b0 5 5 --seed 10
 ```
 
 ```bash
@@ -80,11 +82,11 @@ python simulate.py --name motif_test --protocol sub-01 --nvox 10000 --snrs 20 30
 ```
 
 ```bash
-python simulate.py --name dsi_test --protocol dsi --nvox 10000 --snrs 20 30 40 --n_b0 1 10 --seed 12
+python simulate.py --name dsi_test --protocol dsi --nvox 10000 --snrs 20 30 40 --n_b0 1 1 --seed 12
 ```
 
 ```bash
-python simulate.py --name hardi_test --protocol hardi --nvox 10000 --snrs 20 30 40 --n_b0 1 10 --seed 13
+python simulate.py --name hardi_test --protocol hardi --nvox 10000 --snrs 20 30 40 --n_b0 6 6 --seed 13
 ```
 
 ```bash
@@ -96,7 +98,7 @@ python simulate.py --name random_test --protocol random --nvox 10000 --snrs 20 3
 5³ = 125 parameter combinations × 100 orientations = 12,500 samples, noisy copy at SNR 30.
 
 ```bash
-python simulate.py --name ukb_grid --protocol ukb --grid 5 100 --snrs 30 --n_b0 1 10 --seed 20
+python simulate.py --name ukb_grid --protocol ukb --grid 5 100 --snrs 30 --n_b0 5 5 --seed 20
 ```
 
 ```bash

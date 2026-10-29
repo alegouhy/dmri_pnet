@@ -25,18 +25,24 @@ def pooled(*sizes):
     return nn.Sequential(nn.LayerNorm(sizes[0]), mlp(*sizes))
 
 
+def scaled(width, *sizes):
+    # hidden sizes times a width factor, to fit a weight budget
+    return [round(n * width) for n in sizes]
+
+
 def head(n_in, n_out=3):
     return nn.Sequential(nn.Linear(n_in, n_out), nn.Sigmoid())
 
 
 class TNet(nn.Module):
     # predicts a k×k transform of the points, initialised to identity
-    def __init__(self, k):
+    def __init__(self, k, width=1):
         super().__init__()
         self.k = k
-        self.net = mlp(k, 64, 128, 1024)
-        self.glob = pooled(1024, 512, 256)
-        self.out = nn.Linear(256, k * k)
+        h = scaled(width, 64, 128, 1024, 512, 256)
+        self.net = mlp(k, *h[:3])
+        self.glob = pooled(*h[2:])
+        self.out = nn.Linear(h[4], k * k)
         nn.init.zeros_(self.out.weight)
         self.out.bias.data = torch.eye(k).flatten()
 
@@ -47,15 +53,16 @@ class TNet(nn.Module):
 
 class PointNet(nn.Module):
     # permutation invariant; antipodal invariant only with mirror (adds -g copies); not rotation invariant
-    def __init__(self, tnet=False, mirror=False):
+    def __init__(self, tnet=False, mirror=False, width=1):
         super().__init__()
         self.mirror = mirror
-        self.tnet_in = TNet(3) if tnet else None
-        self.local1 = mlp(5, 64, 64)
-        self.tnet_feat = TNet(64) if tnet else None
-        self.local2 = mlp(64, 128, 1024)
-        self.glob = pooled(1024, 512, 256)
-        self.head = head(256)
+        h = scaled(width, 64, 64, 128, 1024, 512, 256)
+        self.tnet_in = TNet(3, width) if tnet else None
+        self.local1 = mlp(5, h[0], h[1])
+        self.tnet_feat = TNet(h[1], width) if tnet else None
+        self.local2 = mlp(h[1], h[2], h[3])
+        self.glob = pooled(h[3], h[4], h[5])
+        self.head = head(h[5])
 
     def forward(self, x):
         if self.mirror:
@@ -107,7 +114,7 @@ def mlp_width(nmeas, depth, target):
 
 def build(cfg):
     if cfg['model'] == 'pointnet':
-        return PointNet(cfg['tnet'], cfg['mirror'])
+        return PointNet(cfg['tnet'], cfg['mirror'], cfg.get('width', 1))   # no width in older runs
     if cfg['model'] == 'pairwise':
         return PairwisePointNet()
     if cfg['model'] == 'mlp':

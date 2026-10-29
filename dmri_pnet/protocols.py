@@ -51,10 +51,10 @@ def hardi():
     return np.full(60, 2000.), electrostatic([60])
 
 
-def dsi(n=5, b=(250, 5000)):
-    # Cartesian q-space grid inside the sphere of radius n, b affine in |q|² from b[0] to b[1]
+def dsi(n=5, bmax=5000):
+    # Cartesian q-space grid inside the sphere of radius n (DSI-515 for n=5, origin = b=0), b ∝ |q|² up to bmax
     g = np.arange(-n, n + 1)
     q = np.stack(np.meshgrid(g, g, g, indexing='ij'), -1).reshape(-1, 3)
     r2 = (q ** 2).sum(1)
     q, r2 = q[(r2 > 0) & (r2 <= n ** 2)], r2[(r2 > 0) & (r2 <= n ** 2)]
-    return b[0] + (b[1] - b[0]) * (r2 - 1) / (n ** 2 - 1), q / np.sqrt(r2)[:, None]
+    return bmax * r2 / n ** 2, q / np.sqrt(r2)[:, None]

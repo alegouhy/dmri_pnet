@@ -31,7 +31,8 @@ def test_keep_points():
 
 
 def test_fixed_protocols():
-    assert len(protocols.dsi()[0]) == 514 and len(np.unique(protocols.dsi()[0])) == 22
+    bvals = protocols.dsi()[0]
+    assert len(bvals) == 514 and len(np.unique(bvals)) == 22 and bvals.min() == 200 and bvals.max() == 5000
     bvals, bvecs = protocols.hardi()
     cos = np.abs(bvecs @ bvecs.T) - 2 * np.eye(len(bvecs))
     assert np.degrees(np.arccos(cos.max())) > 15      # directions spread out, antipodes included

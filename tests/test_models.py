@@ -16,7 +16,8 @@ def same(model, a, b):
         return torch.allclose(model(a), model(b), atol=1e-10)
 
 
-ALL = [models.PointNet(), models.PointNet(mirror=True), models.PointNet(tnet=True), models.PairwisePointNet()]
+ALL = [models.PointNet(), models.PointNet(mirror=True), models.PointNet(tnet=True),
+       models.PointNet(tnet=True, width=0.521), models.PairwisePointNet()]
 INVARIANT = [models.PairwisePointNet()]
 
 
@@ -51,4 +52,5 @@ def test_weight_budget():
     n = lambda m: sum(p.numel() for p in m.parameters())
     w = models.mlp_width(100, 3, 803907)
     assert n(models.PointNet()) == n(models.PairwisePointNet()) == 803907
+    assert n(models.PointNet(tnet=True, width=0.521)) == 804549
     assert abs(n(models.SignalMLP(100, [w] * 3)) - 803907) / 803907 < 0.002
